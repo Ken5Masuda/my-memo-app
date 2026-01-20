@@ -24,12 +24,13 @@
 - ToDoアプリ作成（追加・削除・完了切り替え機能）
 - ローカルストレージ保存機能追加
 - Supabase接続
+- 認証機能追加
 
 ### 学んだこと
-- useState、useEffect、TypeScript型定義、localStorage、Supabase（テーブル作成、環境変数、CRUD操作）、トラブルシューティング
+- useState、useEffect、TypeScript型定義、localStorage、Supabase（テーブル作成、環境変数、CRUD操作、Auth、RLS）、セキュリティポリシー
 
 ### 次回
-- 認証機能追加
+- Phase 2 - V0でモックアップ作成
 
 ### 参考チャット
 - https://claude.ai/share/601e9fec-ae0a-4304-b5f7-8fe5178e0e4a

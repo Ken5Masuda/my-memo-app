@@ -9,7 +9,7 @@
 - [x] shadcn/ui セットアップ
 - [x] ToDoアプリ作成
 - [x] Supabase接続
-- [ ] 認証機能追加
+- [x] 認証機能追加
 
 ## Phase 2: デザイン・モックアップ（Week 3）
 
