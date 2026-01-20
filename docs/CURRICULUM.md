@@ -8,7 +8,7 @@
 - [x] Next.js プロジェクト作成
 - [x] shadcn/ui セットアップ
 - [x] ToDoアプリ作成
-- [ ] Supabase接続
+- [x] Supabase接続
 - [ ] 認証機能追加
 
 ## Phase 2: デザイン・モックアップ（Week 3）
