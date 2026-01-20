@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,10 +13,45 @@ type Task = {
   completed: boolean;
 };
 
+// ローカルストレージのキー（データを保存・取得する際の識別子）
+const STORAGE_KEY = "todo-tasks";
+
 export default function TodoPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [inputValue, setInputValue] = useState("");
   const isComposingRef = useRef(false); // IME変換中かどうか
+  const isInitializedRef = useRef(false); // 初期化完了フラグ
+
+  // ページ読み込み時にローカルストレージからデータを復元
+  // 空の依存配列[]により、コンポーネントのマウント時に1回だけ実行される
+  useEffect(() => {
+    // ローカルストレージからJSON文字列を取得
+    const savedTasks = localStorage.getItem(STORAGE_KEY);
+
+    if (savedTasks) {
+      // JSON文字列をオブジェクトに変換（パース）してstateにセット
+      // try-catchで不正なJSONデータによるエラーを防止
+      try {
+        const parsedTasks: Task[] = JSON.parse(savedTasks);
+        setTasks(parsedTasks);
+      } catch (error) {
+        console.error("ローカルストレージのデータ読み込みに失敗:", error);
+      }
+    }
+
+    // 初期化完了をマーク
+    isInitializedRef.current = true;
+  }, []);
+
+  // タスクが変更されるたびにローカルストレージに保存
+  // tasksが依存配列に含まれているため、tasksが変更されるたびに実行される
+  useEffect(() => {
+    // 初期化前は保存しない（読み込み前に空配列で上書きするのを防止）
+    if (!isInitializedRef.current) return;
+
+    // オブジェクトをJSON文字列に変換してローカルストレージに保存
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }, [tasks]);
 
   // タスクを追加
   const addTask = () => {
