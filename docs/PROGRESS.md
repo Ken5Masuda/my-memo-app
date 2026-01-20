@@ -15,3 +15,19 @@
 
 ### 参考チャット
 - https://claude.ai/share/601e9fec-ae0a-4304-b5f7-8fe5178e0e4a
+
+---
+
+## 2025-01-20
+
+### やったこと
+- ToDoアプリ作成（追加・削除・完了切り替え機能）
+
+### 学んだこと
+- useState、TypeScript型定義、コンポーネント内でのCRUD操作
+
+### 次回
+- ローカルストレージ保存、Supabase接続
+
+### 参考チャット
+- https://claude.ai/share/601e9fec-ae0a-4304-b5f7-8fe5178e0e4a

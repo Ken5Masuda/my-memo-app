@@ -7,7 +7,7 @@
 - [x] Claude Code インストール
 - [x] Next.js プロジェクト作成
 - [x] shadcn/ui セットアップ
-- [ ] ToDoアプリ作成
+- [x] ToDoアプリ作成
 - [ ] Supabase接続
 - [ ] 認証機能追加
 
