@@ -30,4 +30,4 @@ docs/PROGRESS.md を参照
 - 進捗はPROGRESS.mdに記録、チャットURLも残す
 
 ## 過去のチャット履歴
-- 2025-01-19: 環境構築 https://claude.ai/share/601e9fec-ae0a-4304-b5f7-8fe5178e0e4a
+- 2026-01-19: 環境構築 https://claude.ai/share/601e9fec-ae0a-4304-b5f7-8fe5178e0e4a
