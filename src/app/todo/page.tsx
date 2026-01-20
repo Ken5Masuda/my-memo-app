@@ -1,85 +1,87 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase";
+import { AuthGuard, useAuth } from "@/components/auth/auth-guard";
 
 // タスクの型定義（Supabaseのテーブル構造に合わせる）
 type Task = {
   id: number;
-  title: string;  // Supabaseのカラム名に合わせる
+  title: string;
   completed: boolean;
+  user_id: string;
   created_at?: string;
 };
 
-export default function TodoPage() {
+// ToDoページの本体コンポーネント
+function TodoContent() {
+  const router = useRouter();
+  const { user } = useAuth();
+
   // 状態管理
-  const [tasks, setTasks] = useState<Task[]>([]); // タスク一覧
-  const [inputValue, setInputValue] = useState(""); // 入力欄の値
-  const [isLoading, setIsLoading] = useState(true); // ローディング状態
-  const [error, setError] = useState<string | null>(null); // エラーメッセージ
-  const isComposingRef = useRef(false); // IME変換中かどうか
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const isComposingRef = useRef(false);
 
   // ページ読み込み時にSupabaseからタスクを取得
-  // 空の依存配列[]により、コンポーネントのマウント時に1回だけ実行される
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    if (user) {
+      fetchTasks();
+    }
+  }, [user]);
 
   // Supabaseからタスク一覧を取得する関数
+  // RLSポリシーにより、自分のタスクのみ取得される
   const fetchTasks = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Supabaseのtodosテーブルから全データを取得
-      // select('*')で全カラムを取得、order()で作成日時順にソート
       const { data, error } = await supabase
         .from("todos")
         .select("*")
         .order("created_at", { ascending: true });
 
-      // エラーがあればthrowしてcatchブロックで処理
       if (error) throw error;
 
-      // 取得したデータをstateにセット
       setTasks(data || []);
     } catch (err) {
-      // エラーメッセージを設定
       setError("タスクの取得に失敗しました");
       console.error("Fetch error:", err);
     } finally {
-      // 成功・失敗に関わらずローディングを終了
       setIsLoading(false);
     }
   };
 
   // タスクを追加する関数
   const addTask = async () => {
-    // 空文字の場合は何もしない
-    if (inputValue.trim() === "") return;
+    if (inputValue.trim() === "" || !user) return;
 
     try {
       setError(null);
 
-      // Supabaseのtodosテーブルに新しいタスクをINSERT
-      // insert()でデータを挿入、select()で挿入したデータを返す
-      // single()で単一のオブジェクトとして取得
+      // user_idを含めてINSERT
       const { data, error } = await supabase
         .from("todos")
-        .insert({ title: inputValue.trim(), completed: false })
+        .insert({
+          title: inputValue.trim(),
+          completed: false,
+          user_id: user.id, // ログインユーザーのIDを設定
+        })
         .select()
         .single();
 
       if (error) throw error;
 
-      // 成功したら、返ってきたデータをタスク一覧に追加
-      // Supabaseが自動生成したidやcreated_atも含まれる
       setTasks([...tasks, data]);
-      setInputValue(""); // 入力欄をクリア
+      setInputValue("");
     } catch (err) {
       setError("タスクの追加に失敗しました");
       console.error("Insert error:", err);
@@ -88,15 +90,12 @@ export default function TodoPage() {
 
   // タスクの完了/未完了を切り替える関数
   const toggleTask = async (id: number) => {
-    // 対象のタスクを検索
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
 
     try {
       setError(null);
 
-      // Supabaseのtodosテーブルを更新
-      // update()で更新内容を指定、eq()で条件を指定（id一致）
       const { error } = await supabase
         .from("todos")
         .update({ completed: !task.completed })
@@ -104,8 +103,6 @@ export default function TodoPage() {
 
       if (error) throw error;
 
-      // 成功したら、ローカルのstateも更新
-      // map()で該当タスクのcompletedを反転
       setTasks(
         tasks.map((t) =>
           t.id === id ? { ...t, completed: !t.completed } : t
@@ -122,8 +119,6 @@ export default function TodoPage() {
     try {
       setError(null);
 
-      // Supabaseのtodosテーブルから削除
-      // delete()で削除、eq()で条件を指定（id一致）
       const { error } = await supabase
         .from("todos")
         .delete()
@@ -131,12 +126,21 @@ export default function TodoPage() {
 
       if (error) throw error;
 
-      // 成功したら、ローカルのstateからも削除
-      // filter()で該当タスク以外を残す
       setTasks(tasks.filter((task) => task.id !== id));
     } catch (err) {
       setError("タスクの削除に失敗しました");
       console.error("Delete error:", err);
+    }
+  };
+
+  // ログアウト処理
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.push("/auth/login");
+    } catch (err) {
+      console.error("Logout error:", err);
     }
   };
 
@@ -162,9 +166,16 @@ export default function TodoPage() {
       <div className="container mx-auto max-w-2xl px-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">
-              ToDoアプリ
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl font-bold">ToDoアプリ</CardTitle>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                ログアウト
+              </Button>
+            </div>
+            {/* ログイン中のユーザー情報を表示 */}
+            {user && (
+              <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+            )}
           </CardHeader>
           <CardContent>
             {/* エラーメッセージの表示 */}
@@ -251,5 +262,15 @@ export default function TodoPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// AuthGuardでラップしてエクスポート
+// ログインしていない場合はログインページにリダイレクトされる
+export default function TodoPage() {
+  return (
+    <AuthGuard>
+      <TodoContent />
+    </AuthGuard>
   );
 }
