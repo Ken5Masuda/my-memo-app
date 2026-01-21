@@ -61,3 +61,4 @@ docs/PROGRESS.md を参照
 ## 過去のチャット履歴
 - 2026-01-19: 環境構築 https://claude.ai/share/601e9fec-ae0a-4304-b5f7-8fe5178e0e4a
 - 2026-01-20: ToDoアプリ作成、Supabase連携、認証機能追加（Phase 1完了）
+- 2026-01-21: V0モックアップ作成・取り込み（Phase 2）
