@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Star, MoreHorizontal, Bookmark, ExternalLink } from "lucide-react";
+import { Star, MoreHorizontal, Bookmark } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,23 +14,28 @@ import { Button } from "@/components/ui/button";
 
 export interface Note {
   id: string;
+  user_id?: string;
   title: string;
   content: string;
-  createdAt: string;
-  isStarred: boolean;
-  isBookmark: boolean;
-  url?: string;
-  category: string;
-  tags?: string[];
+  folder: string;
+  tags: string[];
+  is_starred: boolean;
+  is_bookmarked: boolean;
+  created_at: string;
+  updated_at?: string;
 }
 
 interface NoteCardProps {
   note: Note;
   onToggleStar: (id: string) => void;
   onClick: (note: Note) => void;
+  onEdit: (note: Note) => void;
+  onMoveToFolder: (note: Note) => void;
+  onCopy: (note: Note) => void;
+  onDelete: (note: Note) => void;
 }
 
-export function NoteCard({ note, onToggleStar, onClick }: NoteCardProps) {
+export function NoteCard({ note, onToggleStar, onClick, onEdit, onMoveToFolder, onCopy, onDelete }: NoteCardProps) {
   return (
     <Card
       className={cn(
@@ -44,19 +49,13 @@ export function NoteCard({ note, onToggleStar, onClick }: NoteCardProps) {
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            {note.isBookmark && (
+            {note.is_bookmarked && (
               <Bookmark className="size-3.5 fill-primary text-primary" />
             )}
             <h3 className="line-clamp-1 font-medium text-card-foreground">
               {note.title}
             </h3>
           </div>
-          {note.url && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <ExternalLink className="size-3" />
-              <span className="line-clamp-1">{new URL(note.url).hostname}</span>
-            </div>
-          )}
         </div>
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <Button
@@ -71,7 +70,7 @@ export function NoteCard({ note, onToggleStar, onClick }: NoteCardProps) {
             <Star
               className={cn(
                 "size-4",
-                note.isStarred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"
+                note.is_starred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"
               )}
             />
           </Button>
@@ -81,12 +80,12 @@ export function NoteCard({ note, onToggleStar, onClick }: NoteCardProps) {
                 <MoreHorizontal className="size-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>編集</DropdownMenuItem>
-              <DropdownMenuItem>フォルダに移動</DropdownMenuItem>
-              <DropdownMenuItem>コピー</DropdownMenuItem>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={() => onEdit(note)}>編集</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onMoveToFolder(note)}>フォルダに移動</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCopy(note)}>コピー</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">削除</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(note)}>削除</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -113,7 +112,9 @@ export function NoteCard({ note, onToggleStar, onClick }: NoteCardProps) {
               )}
             </div>
           )}
-          <span className="ml-auto text-xs text-muted-foreground">{note.createdAt}</span>
+          <span className="ml-auto text-xs text-muted-foreground">
+            {new Date(note.created_at).toLocaleDateString("ja-JP")}
+          </span>
         </div>
       </CardContent>
     </Card>

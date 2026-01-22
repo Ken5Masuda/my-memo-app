@@ -40,6 +40,7 @@ interface NoteEditorProps {
 }
 
 const folders = [
+  { id: "inbox", name: "受信箱" },
   { id: "work", name: "仕事" },
   { id: "personal", name: "プライベート" },
   { id: "learning", name: "学習" },
@@ -59,9 +60,8 @@ export function NoteEditor({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isStarred, setIsStarred] = useState(false);
-  const [isBookmark, setIsBookmark] = useState(false);
-  const [url, setUrl] = useState("");
-  const [category, setCategory] = useState("personal");
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [folder, setFolder] = useState("inbox");
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
 
@@ -71,18 +71,16 @@ export function NoteEditor({
     if (note) {
       setTitle(note.title);
       setContent(note.content);
-      setIsStarred(note.isStarred);
-      setIsBookmark(note.isBookmark);
-      setUrl(note.url || "");
-      setCategory(note.category || "personal");
+      setIsStarred(note.is_starred);
+      setIsBookmarked(note.is_bookmarked);
+      setFolder(note.folder || "inbox");
       setTags(note.tags || []);
     } else {
       setTitle("");
       setContent("");
       setIsStarred(false);
-      setIsBookmark(false);
-      setUrl("");
-      setCategory("personal");
+      setIsBookmarked(false);
+      setFolder("inbox");
       setTags([]);
     }
   }, [note, isOpen]);
@@ -94,16 +92,10 @@ export function NoteEditor({
       id: note?.id,
       title,
       content,
-      isStarred,
-      isBookmark,
-      url: url || undefined,
-      category,
+      is_starred: isStarred,
+      is_bookmarked: isBookmarked,
+      folder,
       tags,
-      createdAt: note?.createdAt || new Date().toLocaleDateString("ja-JP", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
     });
     onClose();
   };
@@ -158,13 +150,13 @@ export function NoteEditor({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsBookmark(!isBookmark)}
+              onClick={() => setIsBookmarked(!isBookmarked)}
               className={cn(
                 "size-9",
-                isBookmark && "text-primary hover:text-primary/80"
+                isBookmarked && "text-primary hover:text-primary/80"
               )}
             >
-              <Bookmark className={cn("size-4", isBookmark && "fill-current")} />
+              <Bookmark className={cn("size-4", isBookmarked && "fill-current")} />
             </Button>
             {isEditing && onDelete && (
               <DropdownMenu>
@@ -230,21 +222,6 @@ export function NoteEditor({
             </Button>
           </div>
 
-          {/* URL field for bookmarks */}
-          {isBookmark && (
-            <div className="mb-4">
-              <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
-                URL
-              </label>
-              <Input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://..."
-                className="bg-secondary/50"
-              />
-            </div>
-          )}
-
           {/* Content */}
           <Textarea
             value={content}
@@ -264,17 +241,17 @@ export function NoteEditor({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2 bg-transparent">
-                  {folders.find((f) => f.id === category)?.name || "選択"}
+                  {folders.find((f) => f.id === folder)?.name || "選択"}
                   <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                {folders.map((folder) => (
+                {folders.map((f) => (
                   <DropdownMenuItem
-                    key={folder.id}
-                    onClick={() => setCategory(folder.id)}
+                    key={f.id}
+                    onClick={() => setFolder(f.id)}
                   >
-                    {folder.name}
+                    {f.name}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -315,7 +292,7 @@ export function NoteEditor({
           {/* Actions */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {note?.createdAt && `作成日: ${note.createdAt}`}
+              {note?.created_at && `作成日: ${new Date(note.created_at).toLocaleDateString("ja-JP")}`}
             </p>
             <div className="flex items-center gap-2">
               <Button variant="ghost" onClick={onClose}>

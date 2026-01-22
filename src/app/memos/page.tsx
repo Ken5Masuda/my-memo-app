@@ -5,111 +5,29 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { NoteGrid } from "@/components/dashboard/note-grid";
 import { NoteEditor } from "@/components/dashboard/note-editor";
+import { FolderSelectDialog } from "@/components/dashboard/folder-select-dialog";
+import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
 import type { Note } from "@/components/dashboard/note-card";
+import { supabase } from "@/lib/supabase";
+import { AuthGuard, useAuth } from "@/components/auth/auth-guard";
 
-// Sample data
-const sampleNotes: Note[] = [
-  {
-    id: "1",
-    title: "Next.js 15 の新機能まとめ",
-    content:
-      "App Router の改善点、Server Actions の安定化、Turbopack の統合など、Next.js 15 で追加された主要な機能についてまとめました。特にキャッシュの扱いが大きく変わっています。",
-    createdAt: "2024年1月20日",
-    isStarred: true,
-    isBookmark: false,
-    category: "learning",
-    tags: ["Next.js", "React", "開発"],
-  },
-  {
-    id: "2",
-    title: "プロジェクト企画書 - AI チャットボット",
-    content:
-      "社内向け AI チャットボットの企画書。目的、機能要件、技術スタック、スケジュールなどを整理。RAG を活用した社内ドキュメント検索機能が鍵になる。",
-    createdAt: "2024年1月19日",
-    isStarred: true,
-    isBookmark: false,
-    category: "projects",
-    tags: ["企画", "AI", "プロジェクト"],
-  },
-  {
-    id: "3",
-    title: "Figma デザインシステム参考",
-    content:
-      "優れたデザインシステムの実装例。カラーパレット、タイポグラフィ、コンポーネント設計の参考になるリソースをまとめたブックマーク。",
-    createdAt: "2024年1月18日",
-    isStarred: false,
-    isBookmark: true,
-    url: "https://www.figma.com/community",
-    category: "bookmarks",
-    tags: ["デザイン", "UI/UX"],
-  },
-  {
-    id: "4",
-    title: "週次ミーティング議事録 - 1/17",
-    content:
-      "開発進捗の共有。フロントエンド: ダッシュボード実装完了。バックエンド: API設計レビュー中。次週の目標: E2Eテスト環境構築、本番デプロイ準備。",
-    createdAt: "2024年1月17日",
-    isStarred: false,
-    isBookmark: false,
-    category: "meetings",
-    tags: ["ミーティング", "議事録"],
-  },
-  {
-    id: "5",
-    title: "読書メモ: アトミックハビット",
-    content:
-      "習慣形成の4つの法則: 1. きっかけを明確にする 2. 魅力的にする 3. 簡単にする 4. 満足感を得る。小さな改善を積み重ねることで大きな変化を生む。",
-    createdAt: "2024年1月15日",
-    isStarred: false,
-    isBookmark: false,
-    category: "reading",
-    tags: ["読書", "自己啓発"],
-  },
-  {
-    id: "6",
-    title: "Tailwind CSS チートシート",
-    content:
-      "よく使う Tailwind CSS のクラスをまとめた。flex, grid レイアウト、spacing、typography、colors など。特にレスポンシブ対応のブレイクポイントは要確認。",
-    createdAt: "2024年1月14日",
-    isStarred: true,
-    isBookmark: true,
-    url: "https://tailwindcss.com/docs",
-    category: "bookmarks",
-    tags: ["CSS", "開発"],
-  },
-  {
-    id: "7",
-    title: "アプリアイデア: 家計簿アプリ",
-    content:
-      "シンプルな家計簿アプリのアイデア。レシート読み取り機能、カテゴリ自動分類、月次レポート生成。差別化ポイントはAIによる支出傾向分析と節約提案。",
-    createdAt: "2024年1月12日",
-    isStarred: false,
-    isBookmark: false,
-    category: "ideas",
-    tags: ["アイデア", "アプリ"],
-  },
-  {
-    id: "8",
-    title: "TypeScript 型ユーティリティ集",
-    content:
-      "実務で役立つ TypeScript の型ユーティリティ。Partial, Required, Pick, Omit, Record など。ジェネリクスを活用した型の再利用方法も整理。",
-    createdAt: "2024年1月10日",
-    isStarred: false,
-    isBookmark: false,
-    category: "learning",
-    tags: ["TypeScript", "開発"],
-  },
-];
-
-export default function Dashboard() {
+function Dashboard() {
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [notes, setNotes] = useState<Note[]>(sampleNotes);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // ダイアログ用の状態
+  const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedNoteForAction, setSelectedNoteForAction] = useState<Note | null>(null);
+
+  // ダークモードの切り替え
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
@@ -118,17 +36,51 @@ export default function Dashboard() {
     }
   }, [isDarkMode]);
 
+  // メモをSupabaseから取得
+  const fetchNotes = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("memos")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("メモの取得に失敗しました:", error);
+        return;
+      }
+
+      setNotes(data || []);
+    } catch (error) {
+      console.error("メモの取得に失敗しました:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 初回ロード時にメモを取得
+  useEffect(() => {
+    if (user) {
+      fetchNotes();
+    }
+  }, [user]);
+
+  // フィルタリング
   const filteredNotes = useMemo(() => {
     let filtered = notes;
 
-    // Filter by category
+    // Filter by category/folder
     if (selectedCategory !== "all") {
       if (selectedCategory === "starred") {
-        filtered = filtered.filter((note) => note.isStarred);
+        filtered = filtered.filter((note) => note.is_starred);
       } else if (selectedCategory === "bookmarks") {
-        filtered = filtered.filter((note) => note.isBookmark);
+        filtered = filtered.filter((note) => note.is_bookmarked);
       } else {
-        filtered = filtered.filter((note) => note.category === selectedCategory);
+        // フォルダでフィルタ
+        filtered = filtered.filter((note) => note.folder === selectedCategory);
       }
     }
 
@@ -146,66 +98,235 @@ export default function Dashboard() {
     return filtered;
   }, [notes, selectedCategory, searchQuery]);
 
-  const handleToggleStar = (id: string) => {
+  // スター切り替え
+  const handleToggleStar = async (id: string) => {
+    const note = notes.find((n) => n.id === id);
+    if (!note) return;
+
+    const newStarred = !note.is_starred;
+
+    // 楽観的更新
     setNotes((prev) =>
-      prev.map((note) =>
-        note.id === id ? { ...note, isStarred: !note.isStarred } : note
-      )
+      prev.map((n) => (n.id === id ? { ...n, is_starred: newStarred } : n))
     );
+
+    // DBを更新
+    const { error } = await supabase
+      .from("memos")
+      .update({ is_starred: newStarred, updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) {
+      console.error("スターの更新に失敗しました:", error);
+      // 失敗したら元に戻す
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_starred: !newStarred } : n))
+      );
+    }
   };
 
+  // メモクリック（編集モーダルを開く）
   const handleNoteClick = (note: Note) => {
     setEditingNote(note);
     setIsEditorOpen(true);
   };
 
+  // 新規メモ作成
   const handleNewNote = () => {
     setEditingNote(null);
     setIsEditorOpen(true);
   };
 
-  const handleSaveNote = (noteData: Partial<Note> & { title: string; content: string }) => {
+  // メモ保存（新規作成・更新）
+  const handleSaveNote = async (
+    noteData: Partial<Note> & { title: string; content: string }
+  ) => {
+    if (!user) return;
+
     if (noteData.id) {
-      // Update existing note
+      // 既存メモの更新
+      const { error } = await supabase
+        .from("memos")
+        .update({
+          title: noteData.title,
+          content: noteData.content,
+          folder: noteData.folder,
+          tags: noteData.tags,
+          is_starred: noteData.is_starred,
+          is_bookmarked: noteData.is_bookmarked,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", noteData.id);
+
+      if (error) {
+        console.error("メモの更新に失敗しました:", error);
+        return;
+      }
+
+      // ローカル状態を更新
       setNotes((prev) =>
         prev.map((note) =>
-          note.id === noteData.id ? { ...note, ...noteData } : note
+          note.id === noteData.id
+            ? {
+                ...note,
+                title: noteData.title,
+                content: noteData.content,
+                folder: noteData.folder || note.folder,
+                tags: noteData.tags || note.tags,
+                is_starred: noteData.is_starred ?? note.is_starred,
+                is_bookmarked: noteData.is_bookmarked ?? note.is_bookmarked,
+                updated_at: new Date().toISOString(),
+              }
+            : note
         )
       );
     } else {
-      // Create new note
-      const newNote: Note = {
-        id: Date.now().toString(),
+      // 新規メモ作成
+      const newNote = {
+        user_id: user.id,
         title: noteData.title,
         content: noteData.content,
-        createdAt: noteData.createdAt || new Date().toLocaleDateString("ja-JP", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        }),
-        isStarred: noteData.isStarred || false,
-        isBookmark: noteData.isBookmark || false,
-        url: noteData.url,
-        category: noteData.category || "personal",
+        folder: noteData.folder || "inbox",
         tags: noteData.tags || [],
+        is_starred: noteData.is_starred || false,
+        is_bookmarked: noteData.is_bookmarked || false,
       };
-      setNotes((prev) => [newNote, ...prev]);
+
+      const { data, error } = await supabase
+        .from("memos")
+        .insert(newNote)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("メモの作成に失敗しました:", error);
+        return;
+      }
+
+      // ローカル状態に追加
+      setNotes((prev) => [data, ...prev]);
     }
   };
 
-  const handleDeleteNote = (id: string) => {
+  // メモ削除
+  const handleDeleteNote = async (id: string) => {
+    const { error } = await supabase.from("memos").delete().eq("id", id);
+
+    if (error) {
+      console.error("メモの削除に失敗しました:", error);
+      return;
+    }
+
+    // ローカル状態から削除
     setNotes((prev) => prev.filter((note) => note.id !== id));
   };
 
+  // エディタを閉じる
   const handleCloseEditor = () => {
     setIsEditorOpen(false);
     setEditingNote(null);
   };
 
+  // コンテキストメニュー: 編集
+  const handleEdit = (note: Note) => {
+    setEditingNote(note);
+    setIsEditorOpen(true);
+  };
+
+  // コンテキストメニュー: フォルダに移動ダイアログを開く
+  const handleOpenFolderDialog = (note: Note) => {
+    setSelectedNoteForAction(note);
+    setIsFolderDialogOpen(true);
+  };
+
+  // フォルダ移動を実行
+  const handleMoveToFolder = async (folderId: string) => {
+    if (!selectedNoteForAction) return;
+
+    const { error } = await supabase
+      .from("memos")
+      .update({ folder: folderId, updated_at: new Date().toISOString() })
+      .eq("id", selectedNoteForAction.id);
+
+    if (error) {
+      console.error("フォルダの移動に失敗しました:", error);
+      return;
+    }
+
+    // ローカル状態を更新
+    setNotes((prev) =>
+      prev.map((note) =>
+        note.id === selectedNoteForAction.id
+          ? { ...note, folder: folderId, updated_at: new Date().toISOString() }
+          : note
+      )
+    );
+
+    setSelectedNoteForAction(null);
+  };
+
+  // コンテキストメニュー: コピー（複製）
+  const handleCopy = async (note: Note) => {
+    if (!user) return;
+
+    const copiedNote = {
+      user_id: user.id,
+      title: `${note.title} (コピー)`,
+      content: note.content,
+      folder: note.folder,
+      tags: note.tags,
+      is_starred: false,
+      is_bookmarked: false,
+    };
+
+    const { data, error } = await supabase
+      .from("memos")
+      .insert(copiedNote)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("メモのコピーに失敗しました:", error);
+      return;
+    }
+
+    // ローカル状態に追加
+    setNotes((prev) => [data, ...prev]);
+  };
+
+  // コンテキストメニュー: 削除ダイアログを開く
+  const handleOpenDeleteDialog = (note: Note) => {
+    setSelectedNoteForAction(note);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // 削除を実行
+  const handleConfirmDelete = async () => {
+    if (!selectedNoteForAction) return;
+
+    const { error } = await supabase
+      .from("memos")
+      .delete()
+      .eq("id", selectedNoteForAction.id);
+
+    if (error) {
+      console.error("メモの削除に失敗しました:", error);
+      return;
+    }
+
+    // ローカル状態から削除
+    setNotes((prev) => prev.filter((note) => note.id !== selectedNoteForAction.id));
+    setSelectedNoteForAction(null);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <Sidebar selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
+      <Sidebar
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        notes={notes}
+      />
 
       {/* Main Content */}
       <main className="flex flex-1 flex-col overflow-hidden">
@@ -222,12 +343,25 @@ export default function Dashboard() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6">
-          <NoteGrid
-            notes={filteredNotes}
-            viewMode={viewMode}
-            onToggleStar={handleToggleStar}
-            onNoteClick={handleNoteClick}
-          />
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-primary"></div>
+                <p className="mt-2 text-muted-foreground">読み込み中...</p>
+              </div>
+            </div>
+          ) : (
+            <NoteGrid
+              notes={filteredNotes}
+              viewMode={viewMode}
+              onToggleStar={handleToggleStar}
+              onNoteClick={handleNoteClick}
+              onEdit={handleEdit}
+              onMoveToFolder={handleOpenFolderDialog}
+              onCopy={handleCopy}
+              onDelete={handleOpenDeleteDialog}
+            />
+          )}
         </div>
       </main>
 
@@ -239,6 +373,37 @@ export default function Dashboard() {
         onSave={handleSaveNote}
         onDelete={handleDeleteNote}
       />
+
+      {/* Folder Select Dialog */}
+      <FolderSelectDialog
+        isOpen={isFolderDialogOpen}
+        onClose={() => {
+          setIsFolderDialogOpen(false);
+          setSelectedNoteForAction(null);
+        }}
+        onSelect={handleMoveToFolder}
+        currentFolder={selectedNoteForAction?.folder || "inbox"}
+      />
+
+      {/* Delete Confirm Dialog */}
+      <DeleteConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setSelectedNoteForAction(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        noteTitle={selectedNoteForAction?.title || ""}
+      />
     </div>
+  );
+}
+
+// 認証ガードでラップしてエクスポート
+export default function MemosPage() {
+  return (
+    <AuthGuard>
+      <Dashboard />
+    </AuthGuard>
   );
 }

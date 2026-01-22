@@ -8,9 +8,13 @@ interface NoteGridProps {
   viewMode: "grid" | "list";
   onToggleStar: (id: string) => void;
   onNoteClick: (note: Note) => void;
+  onEdit: (note: Note) => void;
+  onMoveToFolder: (note: Note) => void;
+  onCopy: (note: Note) => void;
+  onDelete: (note: Note) => void;
 }
 
-export function NoteGrid({ notes, viewMode, onToggleStar, onNoteClick }: NoteGridProps) {
+export function NoteGrid({ notes, viewMode, onToggleStar, onNoteClick, onEdit, onMoveToFolder, onCopy, onDelete }: NoteGridProps) {
   if (notes.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center text-center">
@@ -51,6 +55,10 @@ export function NoteGrid({ notes, viewMode, onToggleStar, onNoteClick }: NoteGri
           note={note}
           onToggleStar={onToggleStar}
           onClick={onNoteClick}
+          onEdit={onEdit}
+          onMoveToFolder={onMoveToFolder}
+          onCopy={onCopy}
+          onDelete={onDelete}
         />
       ))}
     </div>

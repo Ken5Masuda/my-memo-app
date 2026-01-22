@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"
+import React, { useMemo } from "react";
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -8,72 +8,83 @@ import {
   FileText,
   Bookmark,
   Star,
-  Archive,
   Trash2,
   FolderOpen,
   ChevronDown,
   ChevronRight,
   Plus,
-  Settings,
   Hash,
+  Inbox,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface Category {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  count: number;
-  isFolder?: boolean;
-  children?: Category[];
-}
-
-const categories: Category[] = [
-  { id: "all", name: "すべてのメモ", icon: <FileText className="size-4" />, count: 24 },
-  { id: "bookmarks", name: "ブックマーク", icon: <Bookmark className="size-4" />, count: 12 },
-  { id: "starred", name: "スター付き", icon: <Star className="size-4" />, count: 5 },
-  { id: "archive", name: "アーカイブ", icon: <Archive className="size-4" />, count: 8 },
-];
-
-const folders: Category[] = [
-  {
-    id: "work",
-    name: "仕事",
-    icon: <FolderOpen className="size-4" />,
-    count: 10,
-    isFolder: true,
-    children: [
-      { id: "meetings", name: "会議メモ", icon: <Hash className="size-4" />, count: 4 },
-      { id: "projects", name: "プロジェクト", icon: <Hash className="size-4" />, count: 6 },
-    ],
-  },
-  {
-    id: "personal",
-    name: "プライベート",
-    icon: <FolderOpen className="size-4" />,
-    count: 8,
-    isFolder: true,
-    children: [
-      { id: "ideas", name: "アイデア", icon: <Hash className="size-4" />, count: 3 },
-      { id: "reading", name: "読書メモ", icon: <Hash className="size-4" />, count: 5 },
-    ],
-  },
-  {
-    id: "learning",
-    name: "学習",
-    icon: <FolderOpen className="size-4" />,
-    count: 6,
-    isFolder: true,
-  },
-];
+import type { Note } from "@/components/dashboard/note-card";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 interface SidebarProps {
   selectedCategory: string;
   onSelectCategory: (id: string) => void;
+  notes: Note[];
 }
 
-export function Sidebar({ selectedCategory, onSelectCategory }: SidebarProps) {
+export function Sidebar({ selectedCategory, onSelectCategory, notes }: SidebarProps) {
+  const router = useRouter();
   const [expandedFolders, setExpandedFolders] = useState<string[]>(["work", "personal"]);
+
+  // ログアウト処理
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/auth/login");
+  };
+
+  // メモ数を動的に計算
+  const counts = useMemo(() => {
+    return {
+      all: notes.length,
+      bookmarks: notes.filter((n) => n.is_bookmarked).length,
+      starred: notes.filter((n) => n.is_starred).length,
+      inbox: notes.filter((n) => n.folder === "inbox").length,
+      work: notes.filter((n) => n.folder === "work").length,
+      meetings: notes.filter((n) => n.folder === "meetings").length,
+      projects: notes.filter((n) => n.folder === "projects").length,
+      personal: notes.filter((n) => n.folder === "personal").length,
+      ideas: notes.filter((n) => n.folder === "ideas").length,
+      reading: notes.filter((n) => n.folder === "reading").length,
+      learning: notes.filter((n) => n.folder === "learning").length,
+    };
+  }, [notes]);
+
+  const categories = [
+    { id: "all", name: "すべてのメモ", icon: <FileText className="size-4" />, count: counts.all },
+    { id: "bookmarks", name: "ブックマーク", icon: <Bookmark className="size-4" />, count: counts.bookmarks },
+    { id: "starred", name: "スター付き", icon: <Star className="size-4" />, count: counts.starred },
+  ];
+
+  const folders = [
+    { id: "inbox", name: "受信箱", icon: <Inbox className="size-4" />, count: counts.inbox },
+    {
+      id: "work",
+      name: "仕事",
+      icon: <FolderOpen className="size-4" />,
+      count: counts.work + counts.meetings + counts.projects,
+      children: [
+        { id: "meetings", name: "会議メモ", icon: <Hash className="size-4" />, count: counts.meetings },
+        { id: "projects", name: "プロジェクト", icon: <Hash className="size-4" />, count: counts.projects },
+      ],
+    },
+    {
+      id: "personal",
+      name: "プライベート",
+      icon: <FolderOpen className="size-4" />,
+      count: counts.personal + counts.ideas + counts.reading,
+      children: [
+        { id: "ideas", name: "アイデア", icon: <Hash className="size-4" />, count: counts.ideas },
+        { id: "reading", name: "読書メモ", icon: <Hash className="size-4" />, count: counts.reading },
+      ],
+    },
+    { id: "learning", name: "学習", icon: <FolderOpen className="size-4" />, count: counts.learning },
+  ];
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders((prev) =>
@@ -198,9 +209,12 @@ export function Sidebar({ selectedCategory, onSelectCategory }: SidebarProps) {
 
       {/* Footer */}
       <div className="border-t border-border p-3">
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
-          <Settings className="size-4" />
-          <span>設定</span>
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+        >
+          <LogOut className="size-4" />
+          <span>ログアウト</span>
         </button>
       </div>
     </aside>
