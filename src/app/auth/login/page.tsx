@@ -33,8 +33,8 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      // ログイン成功したらToDoページへリダイレクト
-      router.push("/todo");
+      // ログイン成功したらメモアプリへリダイレクト
+      router.push("/memos");
     } catch (err) {
       setError(err instanceof Error ? err.message : "ログインに失敗しました");
     } finally {
@@ -72,7 +72,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">
-            ToDoアプリ
+            NoteBox
           </CardTitle>
         </CardHeader>
         <CardContent>
