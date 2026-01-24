@@ -75,7 +75,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-8 px-4">
+    <div className="min-h-screen bg-background flex items-center justify-center py-8 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">
@@ -85,14 +85,14 @@ export default function LoginPage() {
         <CardContent>
           {/* エラーメッセージ */}
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded text-sm">
               {error}
             </div>
           )}
 
           {/* 成功メッセージ */}
           {message && (
-            <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded text-sm">
+            <div className="mb-4 p-3 bg-success/10 border border-success/30 text-success rounded text-sm">
               {message}
             </div>
           )}

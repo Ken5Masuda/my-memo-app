@@ -70,7 +70,7 @@ export function NoteCard({ note, onToggleStar, onClick, onEdit, onMoveToFolder, 
             <Star
               className={cn(
                 "size-4",
-                note.is_starred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"
+                note.is_starred ? "fill-star text-star" : "text-muted-foreground"
               )}
             />
           </Button>

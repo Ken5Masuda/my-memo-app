@@ -219,7 +219,7 @@ export function NoteEditor({
               onClick={() => setIsStarred(!isStarred)}
               className={cn(
                 "size-9",
-                isStarred && "text-yellow-500 hover:text-yellow-600"
+                isStarred && "text-star hover:text-star/80"
               )}
             >
               <Star className={cn("size-4", isStarred && "fill-current")} />

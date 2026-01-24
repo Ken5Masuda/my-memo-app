@@ -62,10 +62,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
   // ローディング中の表示
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
-          <p className="mt-2 text-gray-500">認証確認中...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-muted border-t-primary"></div>
+          <p className="mt-2 text-muted-foreground">認証確認中...</p>
         </div>
       </div>
     );
