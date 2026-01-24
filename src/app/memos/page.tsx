@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { toast } from "sonner";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { NoteGrid } from "@/components/dashboard/note-grid";
@@ -160,6 +161,7 @@ function Dashboard() {
 
       if (error) {
         console.error("メモの更新に失敗しました:", error);
+        toast.error("メモの更新に失敗しました");
         return;
       }
 
@@ -180,6 +182,7 @@ function Dashboard() {
             : note
         )
       );
+      toast.success("メモを更新しました");
     } else {
       // 新規メモ作成
       const newNote = {
@@ -200,11 +203,13 @@ function Dashboard() {
 
       if (error) {
         console.error("メモの作成に失敗しました:", error);
+        toast.error("メモの作成に失敗しました");
         return;
       }
 
       // ローカル状態に追加
       setNotes((prev) => [data, ...prev]);
+      toast.success("メモを作成しました");
     }
   };
 
@@ -214,11 +219,13 @@ function Dashboard() {
 
     if (error) {
       console.error("メモの削除に失敗しました:", error);
+      toast.error("メモの削除に失敗しました");
       return;
     }
 
     // ローカル状態から削除
     setNotes((prev) => prev.filter((note) => note.id !== id));
+    toast.success("メモを削除しました");
   };
 
   // エディタを閉じる
@@ -250,6 +257,7 @@ function Dashboard() {
 
     if (error) {
       console.error("フォルダの移動に失敗しました:", error);
+      toast.error("フォルダの移動に失敗しました");
       return;
     }
 
@@ -262,6 +270,7 @@ function Dashboard() {
       )
     );
 
+    toast.success("フォルダに移動しました");
     setSelectedNoteForAction(null);
   };
 
@@ -287,11 +296,13 @@ function Dashboard() {
 
     if (error) {
       console.error("メモのコピーに失敗しました:", error);
+      toast.error("メモのコピーに失敗しました");
       return;
     }
 
     // ローカル状態に追加
     setNotes((prev) => [data, ...prev]);
+    toast.success("メモをコピーしました");
   };
 
   // コンテキストメニュー: 削除ダイアログを開く
@@ -311,11 +322,13 @@ function Dashboard() {
 
     if (error) {
       console.error("メモの削除に失敗しました:", error);
+      toast.error("メモの削除に失敗しました");
       return;
     }
 
     // ローカル状態から削除
     setNotes((prev) => prev.filter((note) => note.id !== selectedNoteForAction.id));
+    toast.success("メモを削除しました");
     setSelectedNoteForAction(null);
   };
 

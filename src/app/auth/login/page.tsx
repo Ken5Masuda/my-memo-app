@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,9 +35,12 @@ export default function LoginPage() {
       if (error) throw error;
 
       // ログイン成功したらメモアプリへリダイレクト
+      toast.success("ログインしました");
       router.push("/memos");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ログインに失敗しました");
+      const errorMessage = err instanceof Error ? err.message : "ログインに失敗しました";
+      setError(errorMessage);
+      toast.error("ログインに失敗しました");
     } finally {
       setIsLoading(false);
     }
@@ -60,8 +64,11 @@ export default function LoginPage() {
 
       // 登録成功メッセージを表示
       setMessage("確認メールを送信しました。メールを確認してください。");
+      toast.success("アカウントを作成しました。確認メールをご確認ください。");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "サインアップに失敗しました");
+      const errorMessage = err instanceof Error ? err.message : "サインアップに失敗しました";
+      setError(errorMessage);
+      toast.error("サインアップに失敗しました");
     } finally {
       setIsLoading(false);
     }

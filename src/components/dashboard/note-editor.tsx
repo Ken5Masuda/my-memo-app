@@ -31,6 +31,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Note } from "@/components/dashboard/note-card";
 
+// バリデーション定数
+const VALIDATION = {
+  TITLE_MAX_LENGTH: 100,
+  CONTENT_MAX_LENGTH: 10000,
+  TAG_MAX_LENGTH: 30,
+  TAGS_MAX_COUNT: 10,
+};
+
 interface NoteEditorProps {
   note?: Note | null;
   isOpen: boolean;
@@ -65,7 +73,53 @@ export function NoteEditor({
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
 
+  // バリデーションエラー
+  const [errors, setErrors] = useState<{
+    title?: string;
+    content?: string;
+    tag?: string;
+  }>({});
+
   const isEditing = !!note;
+
+  // バリデーションチェック
+  const validateTitle = (value: string) => {
+    if (value.length > VALIDATION.TITLE_MAX_LENGTH) {
+      return `タイトルは${VALIDATION.TITLE_MAX_LENGTH}文字以内で入力してください`;
+    }
+    return undefined;
+  };
+
+  const validateContent = (value: string) => {
+    if (value.length > VALIDATION.CONTENT_MAX_LENGTH) {
+      return `本文は${VALIDATION.CONTENT_MAX_LENGTH}文字以内で入力してください`;
+    }
+    return undefined;
+  };
+
+  const validateTag = (value: string) => {
+    if (value.length > VALIDATION.TAG_MAX_LENGTH) {
+      return `タグは${VALIDATION.TAG_MAX_LENGTH}文字以内で入力してください`;
+    }
+    if (tags.length >= VALIDATION.TAGS_MAX_COUNT) {
+      return `タグは最大${VALIDATION.TAGS_MAX_COUNT}個までです`;
+    }
+    return undefined;
+  };
+
+  // タイトル変更ハンドラ
+  const handleTitleChange = (value: string) => {
+    setTitle(value);
+    const error = validateTitle(value);
+    setErrors((prev) => ({ ...prev, title: error }));
+  };
+
+  // 本文変更ハンドラ
+  const handleContentChange = (value: string) => {
+    setContent(value);
+    const error = validateContent(value);
+    setErrors((prev) => ({ ...prev, content: error }));
+  };
 
   useEffect(() => {
     if (note) {
@@ -83,10 +137,18 @@ export function NoteEditor({
       setFolder("inbox");
       setTags([]);
     }
+    // エラーをクリア
+    setErrors({});
+    setNewTag("");
   }, [note, isOpen]);
 
   const handleSave = () => {
     if (!title.trim()) return;
+
+    // バリデーションエラーがあれば保存しない
+    if (errors.title || errors.content) {
+      return;
+    }
 
     onSave({
       id: note?.id,
@@ -101,10 +163,25 @@ export function NoteEditor({
   };
 
   const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag("");
+    const trimmedTag = newTag.trim();
+    if (!trimmedTag) return;
+
+    // バリデーション
+    const error = validateTag(trimmedTag);
+    if (error) {
+      setErrors((prev) => ({ ...prev, tag: error }));
+      return;
     }
+
+    // 重複チェック
+    if (tags.includes(trimmedTag)) {
+      setErrors((prev) => ({ ...prev, tag: "このタグは既に追加されています" }));
+      return;
+    }
+
+    setTags([...tags, trimmedTag]);
+    setNewTag("");
+    setErrors((prev) => ({ ...prev, tag: undefined }));
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -188,12 +265,31 @@ export function NoteEditor({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Title */}
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="タイトルを入力..."
-            className="mb-4 border-none bg-transparent px-0 text-2xl font-bold placeholder:text-muted-foreground/50 focus-visible:ring-0"
-          />
+          <div className="mb-4">
+            <Input
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              placeholder="タイトルを入力..."
+              className={cn(
+                "border-none bg-transparent px-0 text-2xl font-bold placeholder:text-muted-foreground/50 focus-visible:ring-0",
+                errors.title && "text-destructive"
+              )}
+              maxLength={VALIDATION.TITLE_MAX_LENGTH + 10}
+            />
+            <div className="mt-1 flex items-center justify-between text-xs">
+              {errors.title ? (
+                <span className="text-destructive">{errors.title}</span>
+              ) : (
+                <span />
+              )}
+              <span className={cn(
+                "text-muted-foreground",
+                title.length > VALIDATION.TITLE_MAX_LENGTH && "text-destructive"
+              )}>
+                {title.length} / {VALIDATION.TITLE_MAX_LENGTH}
+              </span>
+            </div>
+          </div>
 
           {/* Toolbar */}
           <div className="mb-4 flex flex-wrap items-center gap-1 border-b border-border pb-4">
@@ -223,12 +319,31 @@ export function NoteEditor({
           </div>
 
           {/* Content */}
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="内容を入力..."
-            className="min-h-[300px] resize-none border-none bg-transparent px-0 text-base leading-relaxed placeholder:text-muted-foreground/50 focus-visible:ring-0"
-          />
+          <div>
+            <Textarea
+              value={content}
+              onChange={(e) => handleContentChange(e.target.value)}
+              placeholder="内容を入力..."
+              className={cn(
+                "min-h-[300px] resize-none border-none bg-transparent px-0 text-base leading-relaxed placeholder:text-muted-foreground/50 focus-visible:ring-0",
+                errors.content && "text-destructive"
+              )}
+              maxLength={VALIDATION.CONTENT_MAX_LENGTH + 100}
+            />
+            <div className="mt-1 flex items-center justify-between text-xs">
+              {errors.content ? (
+                <span className="text-destructive">{errors.content}</span>
+              ) : (
+                <span />
+              )}
+              <span className={cn(
+                "text-muted-foreground",
+                content.length > VALIDATION.CONTENT_MAX_LENGTH && "text-destructive"
+              )}>
+                {content.length.toLocaleString()} / {VALIDATION.CONTENT_MAX_LENGTH.toLocaleString()}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
@@ -260,9 +375,17 @@ export function NoteEditor({
 
           {/* Tags */}
           <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-muted-foreground">
-              タグ
-            </label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-medium text-muted-foreground">
+                タグ
+              </label>
+              <span className={cn(
+                "text-xs text-muted-foreground",
+                tags.length >= VALIDATION.TAGS_MAX_COUNT && "text-destructive"
+              )}>
+                {tags.length} / {VALIDATION.TAGS_MAX_COUNT}
+              </span>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               {tags.map((tag) => (
                 <Badge
@@ -281,12 +404,26 @@ export function NoteEditor({
               ))}
               <Input
                 value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
+                onChange={(e) => {
+                  setNewTag(e.target.value);
+                  // 入力中にタグエラーをクリア
+                  if (errors.tag) {
+                    setErrors((prev) => ({ ...prev, tag: undefined }));
+                  }
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder="タグを追加..."
-                className="h-7 w-32 bg-secondary/50 text-sm"
+                className={cn(
+                  "h-7 w-32 bg-secondary/50 text-sm",
+                  errors.tag && "border-destructive"
+                )}
+                maxLength={VALIDATION.TAG_MAX_LENGTH + 5}
+                disabled={tags.length >= VALIDATION.TAGS_MAX_COUNT}
               />
             </div>
+            {errors.tag && (
+              <p className="mt-1 text-xs text-destructive">{errors.tag}</p>
+            )}
           </div>
 
           {/* Actions */}
@@ -298,7 +435,10 @@ export function NoteEditor({
               <Button variant="ghost" onClick={onClose}>
                 キャンセル
               </Button>
-              <Button onClick={handleSave} disabled={!title.trim()}>
+              <Button
+                onClick={handleSave}
+                disabled={!title.trim() || !!errors.title || !!errors.content}
+              >
                 {isEditing ? "保存" : "作成"}
               </Button>
             </div>

@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   FileText,
@@ -34,7 +35,12 @@ export function Sidebar({ selectedCategory, onSelectCategory, notes }: SidebarPr
 
   // ログアウト処理
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("ログアウトに失敗しました");
+      return;
+    }
+    toast.success("ログアウトしました");
     router.push("/auth/login");
   };
 
