@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // useEffectでのsetState呼び出しを許可（フォーム初期化で必要）
+      "react-hooks/set-state-in-effect": "off",
+      // 未使用変数は警告のみ（エラーにしない）
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;
