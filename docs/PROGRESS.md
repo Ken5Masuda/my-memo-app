@@ -77,14 +77,20 @@
 - トースト通知実装（sonner使用、成功/失敗を色分け表示）
 - RLSポリシー確認
 - デザインシステム適用、ハードコード色をCSS変数に統一、success色・スター色追加
+- テスト環境セットアップ（Vitest + React Testing Library）
+- ユニットテスト作成（日付フォーマット関数）
+- コンポーネントテスト作成（Counterコンポーネント）
+- CI/CD設定（GitHub Actions）
 
 ### 学んだこと
 - Vercelの使い方、GitHubとの自動連携、環境変数の設定、CRUD
 - 入力制限の重要性、トースト通知の仕組み、RLSポリシー
 - ハードコード色とCSS変数の違い、デザイントークンの重要性
+- Vitestの設定方法、React Testing Libraryの使い方、userEventによるインタラクションテスト
+- GitHub Actionsワークフロー作成、CI/CDパイプライン構築
 
 ### 次回
-- Phase 4の続き（テスト作成 or CI/CD設定）
+- Phase 5（ネイティブアプリ）またはPhase 4の追加改善
 
 ### 参考チャット
 - https://claude.ai/share/e613e4cd-91a9-44a0-a2b9-217de49134c9
