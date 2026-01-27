@@ -94,3 +94,40 @@
 
 ### 参考チャット
 - https://claude.ai/share/e613e4cd-91a9-44a0-a2b9-217de49134c9
+
+---
+
+## 2026-01-27
+
+### やったこと
+- **Phase 5完了 - Expoモバイルアプリ開発**
+- Expo環境構築（SDK 54、TypeScript）
+- React Navigation設定（Native Stack Navigator）
+- Supabase連携（AsyncStorageでセッション永続化）
+- ログイン・サインアップ画面実装
+- メモ一覧画面実装（FlatList、Pull to Refresh）
+- メモ詳細・編集画面実装（新規作成・編集・削除）
+- スター（お気に入り）機能
+- ダークテーマ対応（キーボード含む）
+- 無効セッション自動クリア機能
+- ハプティックフィードバック実装（expo-haptics）
+
+### 学んだこと
+- Expoプロジェクト構成とSDKバージョン管理
+- React Navigationの設定と画面遷移
+- React NativeでのSupabase Auth連携
+- useFocusEffectによる画面フォーカス時のデータ再取得
+- useRefとuseCallbackを使ったstale closure問題の解決
+- RefreshControlによるPull to Refresh実装
+- expo-hapticsによるネイティブ振動フィードバック
+- keyboardAppearanceによるダークテーマキーボード対応
+
+### 成果物
+- Webアプリ: https://my-memo-app-lovat.vercel.app/
+- モバイルアプリ: /Users/kengomasuda/projects/my-memo-app-mobile
+
+### カリキュラム完了！ 🎉
+全5フェーズを完了。環境構築からフルスタック開発、モバイルアプリ開発まで一連のスキルを習得。
+
+### 参考チャット
+- [このチャットのURL]
