@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { Header } from "@/components/dashboard/header";
+import { Header, SortOrder } from "@/components/dashboard/header";
 import { NoteGrid } from "@/components/dashboard/note-grid";
 import { NoteEditor } from "@/components/dashboard/note-editor";
 import { FolderSelectDialog } from "@/components/dashboard/folder-select-dialog";
@@ -17,6 +17,7 @@ function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("created_at");
   const [notes, setNotes] = useState<Note[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -69,7 +70,7 @@ function Dashboard() {
     }
   }, [user]);
 
-  // フィルタリング
+  // フィルタリングとソート
   const filteredNotes = useMemo(() => {
     let filtered = notes;
 
@@ -96,8 +97,22 @@ function Dashboard() {
       );
     }
 
-    return filtered;
-  }, [notes, selectedCategory, searchQuery]);
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortOrder) {
+        case "created_at":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "updated_at":
+          return new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime();
+        case "title":
+          return a.title.localeCompare(b.title, "ja");
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [notes, selectedCategory, searchQuery, sortOrder]);
 
   // スター切り替え
   const handleToggleStar = async (id: string) => {
@@ -352,6 +367,8 @@ function Dashboard() {
           onNewNote={handleNewNote}
           isDarkMode={isDarkMode}
           onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+          sortOrder={sortOrder}
+          onSortChange={setSortOrder}
         />
 
         {/* Content Area */}

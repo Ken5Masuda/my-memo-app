@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+export type SortOrder = "created_at" | "updated_at" | "title";
+
 interface HeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -18,7 +20,15 @@ interface HeaderProps {
   onNewNote: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
+  sortOrder: SortOrder;
+  onSortChange: (order: SortOrder) => void;
 }
+
+const sortLabels: Record<SortOrder, string> = {
+  created_at: "作成日順",
+  updated_at: "更新日順",
+  title: "タイトル順",
+};
 
 export function Header({
   searchQuery,
@@ -28,6 +38,8 @@ export function Header({
   onNewNote,
   isDarkMode,
   onToggleDarkMode,
+  sortOrder,
+  onSortChange,
 }: HeaderProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
@@ -48,17 +60,32 @@ export function Header({
           />
         </div>
 
-        {/* Filter */}
+        {/* Sort */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="bg-transparent">
+            <Button variant="outline" size="icon" className="bg-transparent" title={sortLabels[sortOrder]}>
               <SlidersHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>作成日順</DropdownMenuItem>
-            <DropdownMenuItem>更新日順</DropdownMenuItem>
-            <DropdownMenuItem>タイトル順</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onSortChange("created_at")}
+              className={sortOrder === "created_at" ? "bg-accent" : ""}
+            >
+              作成日順
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onSortChange("updated_at")}
+              className={sortOrder === "updated_at" ? "bg-accent" : ""}
+            >
+              更新日順
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onSortChange("title")}
+              className={sortOrder === "title" ? "bg-accent" : ""}
+            >
+              タイトル順
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
