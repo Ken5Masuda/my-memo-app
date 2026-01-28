@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import {
   X,
@@ -15,13 +14,13 @@ import {
   List,
   ListOrdered,
   Link2,
-  ImageIcon,
   Code,
   ChevronDown,
+  Undo,
+  Redo,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -30,6 +29,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Note } from "@/components/dashboard/note-card";
+
+// TipTap imports
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
 
 // バリデーション定数
 const VALIDATION = {
@@ -66,7 +71,6 @@ export function NoteEditor({
   onDelete,
 }: NoteEditorProps) {
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
   const [isStarred, setIsStarred] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [folder, setFolder] = useState("inbox");
@@ -82,17 +86,64 @@ export function NoteEditor({
 
   const isEditing = !!note;
 
+  // TipTap Editor
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-primary underline",
+        },
+      }),
+      Placeholder.configure({
+        placeholder: "内容を入力...",
+      }),
+    ],
+    content: "",
+    immediatelyRender: false, // SSRハイドレーションエラー回避
+    editorProps: {
+      attributes: {
+        class:
+          "min-h-[300px] prose prose-invert max-w-none focus:outline-none text-foreground prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0",
+      },
+    },
+    onUpdate: ({ editor }) => {
+      const text = editor.getText();
+      if (text.length > VALIDATION.CONTENT_MAX_LENGTH) {
+        setErrors((prev) => ({
+          ...prev,
+          content: `本文は${VALIDATION.CONTENT_MAX_LENGTH}文字以内で入力してください`,
+        }));
+      } else {
+        setErrors((prev) => ({ ...prev, content: undefined }));
+      }
+    },
+  });
+
+  // リンク追加
+  const setLink = useCallback(() => {
+    if (!editor) return;
+
+    const previousUrl = editor.getAttributes("link").href;
+    const url = window.prompt("URLを入力してください", previousUrl);
+
+    if (url === null) return;
+
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  }, [editor]);
+
   // バリデーションチェック
   const validateTitle = (value: string) => {
     if (value.length > VALIDATION.TITLE_MAX_LENGTH) {
       return `タイトルは${VALIDATION.TITLE_MAX_LENGTH}文字以内で入力してください`;
-    }
-    return undefined;
-  };
-
-  const validateContent = (value: string) => {
-    if (value.length > VALIDATION.CONTENT_MAX_LENGTH) {
-      return `本文は${VALIDATION.CONTENT_MAX_LENGTH}文字以内で入力してください`;
     }
     return undefined;
   };
@@ -114,41 +165,37 @@ export function NoteEditor({
     setErrors((prev) => ({ ...prev, title: error }));
   };
 
-  // 本文変更ハンドラ
-  const handleContentChange = (value: string) => {
-    setContent(value);
-    const error = validateContent(value);
-    setErrors((prev) => ({ ...prev, content: error }));
-  };
-
+  // note/isOpen変更時にエディタをリセット
   useEffect(() => {
+    if (!editor) return;
+
     if (note) {
       setTitle(note.title);
-      setContent(note.content);
+      editor.commands.setContent(note.content || "");
       setIsStarred(note.is_starred);
       setIsBookmarked(note.is_bookmarked);
       setFolder(note.folder || "inbox");
       setTags(note.tags || []);
     } else {
       setTitle("");
-      setContent("");
+      editor.commands.setContent("");
       setIsStarred(false);
       setIsBookmarked(false);
       setFolder("inbox");
       setTags([]);
     }
-    // エラーをクリア
     setErrors({});
     setNewTag("");
-  }, [note, isOpen]);
+  }, [note, isOpen, editor]);
 
   const handleSave = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !editor) return;
 
-    // バリデーションエラーがあれば保存しない
     if (errors.title || errors.content) {
       return;
     }
+
+    const content = editor.getHTML();
 
     onSave({
       id: note?.id,
@@ -166,14 +213,12 @@ export function NoteEditor({
     const trimmedTag = newTag.trim();
     if (!trimmedTag) return;
 
-    // バリデーション
     const error = validateTag(trimmedTag);
     if (error) {
       setErrors((prev) => ({ ...prev, tag: error }));
       return;
     }
 
-    // 重複チェック
     if (tags.includes(trimmedTag)) {
       setErrors((prev) => ({ ...prev, tag: "このタグは既に追加されています" }));
       return;
@@ -196,6 +241,8 @@ export function NoteEditor({
   };
 
   if (!isOpen) return null;
+
+  const contentLength = editor?.getText().length || 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -282,10 +329,12 @@ export function NoteEditor({
               ) : (
                 <span />
               )}
-              <span className={cn(
-                "text-muted-foreground",
-                title.length > VALIDATION.TITLE_MAX_LENGTH && "text-destructive"
-              )}>
+              <span
+                className={cn(
+                  "text-muted-foreground",
+                  title.length > VALIDATION.TITLE_MAX_LENGTH && "text-destructive"
+                )}
+              >
                 {title.length} / {VALIDATION.TITLE_MAX_LENGTH}
               </span>
             </div>
@@ -293,54 +342,107 @@ export function NoteEditor({
 
           {/* Toolbar */}
           <div className="mb-4 flex flex-wrap items-center gap-1 border-b border-border pb-4">
-            <Button variant="ghost" size="icon" className="size-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("size-8", editor?.isActive("bold") && "bg-accent")}
+              onClick={() => editor?.chain().focus().toggleBold().run()}
+              disabled={!editor}
+              title="太字"
+            >
               <Bold className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="size-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("size-8", editor?.isActive("italic") && "bg-accent")}
+              onClick={() => editor?.chain().focus().toggleItalic().run()}
+              disabled={!editor}
+              title="斜体"
+            >
               <Italic className="size-4" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("size-8", editor?.isActive("code") && "bg-accent")}
+              onClick={() => editor?.chain().focus().toggleCode().run()}
+              disabled={!editor}
+              title="コード"
+            >
+              <Code className="size-4" />
+            </Button>
             <div className="mx-2 h-4 w-px bg-border" />
-            <Button variant="ghost" size="icon" className="size-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("size-8", editor?.isActive("bulletList") && "bg-accent")}
+              onClick={() => editor?.chain().focus().toggleBulletList().run()}
+              disabled={!editor}
+              title="箇条書きリスト"
+            >
               <List className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="size-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("size-8", editor?.isActive("orderedList") && "bg-accent")}
+              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              disabled={!editor}
+              title="番号付きリスト"
+            >
               <ListOrdered className="size-4" />
             </Button>
             <div className="mx-2 h-4 w-px bg-border" />
-            <Button variant="ghost" size="icon" className="size-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("size-8", editor?.isActive("link") && "bg-accent")}
+              onClick={setLink}
+              disabled={!editor}
+              title="リンク"
+            >
               <Link2 className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="size-8">
-              <ImageIcon className="size-4" />
+            <div className="mx-2 h-4 w-px bg-border" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              onClick={() => editor?.chain().focus().undo().run()}
+              disabled={!editor?.can().undo()}
+              title="元に戻す"
+            >
+              <Undo className="size-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="size-8">
-              <Code className="size-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              onClick={() => editor?.chain().focus().redo().run()}
+              disabled={!editor?.can().redo()}
+              title="やり直す"
+            >
+              <Redo className="size-4" />
             </Button>
           </div>
 
-          {/* Content */}
+          {/* Editor Content */}
           <div>
-            <Textarea
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              placeholder="内容を入力..."
-              className={cn(
-                "min-h-[300px] resize-none border-none bg-transparent px-0 text-base leading-relaxed placeholder:text-muted-foreground/50 focus-visible:ring-0",
-                errors.content && "text-destructive"
-              )}
-              maxLength={VALIDATION.CONTENT_MAX_LENGTH + 100}
-            />
+            <EditorContent editor={editor} />
             <div className="mt-1 flex items-center justify-between text-xs">
               {errors.content ? (
                 <span className="text-destructive">{errors.content}</span>
               ) : (
                 <span />
               )}
-              <span className={cn(
-                "text-muted-foreground",
-                content.length > VALIDATION.CONTENT_MAX_LENGTH && "text-destructive"
-              )}>
-                {content.length.toLocaleString()} / {VALIDATION.CONTENT_MAX_LENGTH.toLocaleString()}
+              <span
+                className={cn(
+                  "text-muted-foreground",
+                  contentLength > VALIDATION.CONTENT_MAX_LENGTH && "text-destructive"
+                )}
+              >
+                {contentLength.toLocaleString()} / {VALIDATION.CONTENT_MAX_LENGTH.toLocaleString()}
               </span>
             </div>
           </div>
@@ -362,10 +464,7 @@ export function NoteEditor({
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 {folders.map((f) => (
-                  <DropdownMenuItem
-                    key={f.id}
-                    onClick={() => setFolder(f.id)}
-                  >
+                  <DropdownMenuItem key={f.id} onClick={() => setFolder(f.id)}>
                     {f.name}
                   </DropdownMenuItem>
                 ))}
@@ -379,20 +478,18 @@ export function NoteEditor({
               <label className="text-sm font-medium text-muted-foreground">
                 タグ
               </label>
-              <span className={cn(
-                "text-xs text-muted-foreground",
-                tags.length >= VALIDATION.TAGS_MAX_COUNT && "text-destructive"
-              )}>
+              <span
+                className={cn(
+                  "text-xs text-muted-foreground",
+                  tags.length >= VALIDATION.TAGS_MAX_COUNT && "text-destructive"
+                )}
+              >
                 {tags.length} / {VALIDATION.TAGS_MAX_COUNT}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="gap-1 pr-1"
-                >
+                <Badge key={tag} variant="secondary" className="gap-1 pr-1">
                   {tag}
                   <button
                     onClick={() => handleRemoveTag(tag)}
@@ -406,7 +503,6 @@ export function NoteEditor({
                 value={newTag}
                 onChange={(e) => {
                   setNewTag(e.target.value);
-                  // 入力中にタグエラーをクリア
                   if (errors.tag) {
                     setErrors((prev) => ({ ...prev, tag: undefined }));
                   }
@@ -429,7 +525,8 @@ export function NoteEditor({
           {/* Actions */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {note?.created_at && `作成日: ${new Date(note.created_at).toLocaleDateString("ja-JP")}`}
+              {note?.created_at &&
+                `作成日: ${new Date(note.created_at).toLocaleDateString("ja-JP")}`}
             </p>
             <div className="flex items-center gap-2">
               <Button variant="ghost" onClick={onClose}>
