@@ -107,7 +107,7 @@ export function NoteEditor({
     editorProps: {
       attributes: {
         class:
-          "min-h-[300px] prose prose-invert max-w-none focus:outline-none text-foreground prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0",
+          "min-h-[300px] max-w-none focus:outline-none text-foreground",
       },
     },
     onUpdate: ({ editor }) => {
