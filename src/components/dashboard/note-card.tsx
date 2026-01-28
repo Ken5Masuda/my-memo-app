@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Star, MoreHorizontal, Bookmark } from "lucide-react";
@@ -11,6 +12,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+
+// HTMLタグを除去してプレーンテキストを取得
+function stripHtmlTags(html: string): string {
+  if (!html) return "";
+  // HTMLタグを除去
+  const text = html.replace(/<[^>]*>/g, " ");
+  // 連続するスペースを1つに
+  return text.replace(/\s+/g, " ").trim();
+}
 
 export interface Note {
   id: string;
@@ -36,6 +46,9 @@ interface NoteCardProps {
 }
 
 export function NoteCard({ note, onToggleStar, onClick, onEdit, onMoveToFolder, onCopy, onDelete }: NoteCardProps) {
+  // HTMLタグを除去したプレビューテキスト
+  const previewText = useMemo(() => stripHtmlTags(note.content), [note.content]);
+
   return (
     <Card
       className={cn(
@@ -92,7 +105,7 @@ export function NoteCard({ note, onToggleStar, onClick, onEdit, onMoveToFolder, 
       </CardHeader>
       <CardContent>
         <p className="line-clamp-3 text-sm text-muted-foreground leading-relaxed">
-          {note.content}
+          {previewText}
         </p>
         <div className="mt-4 flex items-center justify-between">
           {note.tags && note.tags.length > 0 && (
